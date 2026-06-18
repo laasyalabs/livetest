@@ -1,0 +1,56 @@
+name: FTP Deploy to Hostinger
+
+on:
+  push:
+    paths:
+      - '**.zip'
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Extract ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -name '*.zip' | head -n 1)
+          echo "Found ZIP: $ZIP_FILE"
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted
+
+      - name: FTP Upload Extracted Files to Subdomain
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ftp.laasyalabs.com
+          username: u708902201.stdlaasyalabs
+          password: stdlaasyalabsLL@1234
+          local-dir: extracted/
+          server-dir: ${{ github.event.repository.name }}/
+          exclude: |
+            .git*/
+            .github*/
+            README.md
+            .ftp_deploy_sync_state.json
+
+      - name: Upload ZIP for unzip.php
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ftp.laasyalabs.com
+          username: u708902201.stdlaasyalabs
+          password: stdlaasyalabsLL@1234
+          local-dir: ./
+          server-dir: ${{ github.event.repository.name }}/
+          exclude: |
+            extracted/**
+            .git*/
+            .github*/
+            README.md
+            .ftp_deploy_sync_state.json
+
+      - name: Trigger unzip
+        run: |
+          curl -s "https://laasyalabs.com/unzip.php?folder=subdomains/${{ github.event.repository.name }}&file=project.zip" || true
